@@ -1,0 +1,59 @@
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+    <button id="btn">Pair with bluetooth device</button>
+    <span>Currently playing.... nothing</span>
+</div>
+
+<style>
+    img {
+        width: 100%;
+        height: auto;
+        max-height: 80vh;
+    }
+
+    span {
+        font-size: 4em;
+        text-align: center;
+        display: block;
+        font-weight: bold;
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
+    }
+</style>
+
+<script>
+    genres = ["blues", "classical", "country", "disco", "hiphop", "jazz", "metal", "pop", "reggae", "rock"];
+
+    function handleMusicGenreChanged(event) {
+        const genre = event.target.value.getUint8(0);
+        console.log('Music genre updated ' + genre);
+
+        var img = document.getElementsByTagName('img')[0];
+        img.src = "icons/" + genres[genre] + ".svg";
+        var span = document.getElementsByTagName('span')[0];
+        span.innerHTML = "Currently playing.... " + genres[genre];
+    }
+
+    button = document.getElementById('btn');
+    button.addEventListener('pointerup', function(event) {        
+        navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ['c146c597-5e53-4f93-ae6e-9f996c5bf16a'] })
+            .then(device => device.gatt.connect())
+            .then(server => {
+                return server.getPrimaryService('c146c597-5e53-4f93-ae6e-9f996c5bf16a');
+            })
+            .then(service => {
+                return service.getCharacteristic('280c2899-ea85-438f-a2a0-3f928d4900ae');
+            })
+            .then(characteristic => {
+                var div = document.getElementsByTagName('div')[0];
+                var img = document.createElement('img');
+                div.prepend(img);
+                
+                button.remove();
+
+                characteristic.addEventListener('characteristicvaluechanged', handleMusicGenreChanged);
+                characteristic.startNotifications();
+                return characteristic.readValue();
+            })
+            .catch(error => { console.error(error); });
+    });
+
+</script>
